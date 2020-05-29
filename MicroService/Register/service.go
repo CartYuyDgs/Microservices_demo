@@ -1,12 +1,12 @@
 package Register
 
 type Service struct {
-	Name  string
-	Nodes []*Node
+	Name  string  `json:"name"`
+	Nodes []*Node `json:"nodes"`
 }
 
 type Node struct {
-	Id   string
-	Ip   string
-	Port int
+	Id   string `json:"id"`
+	Ip   string `json:"ip"`
+	Port int    `json:"port"`
 }

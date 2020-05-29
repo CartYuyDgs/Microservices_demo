@@ -3,20 +3,35 @@ package etcd
 import (
 	"Microservices_demo/MicroService/Register"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/coreos/etcd/clientv3"
+	"log"
 	"path"
+	"time"
 )
+
+const MaxServiceNum = 8
 
 type EtcdRegistry struct {
 	options     *Register.Options
 	client      *clientv3.Client
 	serviceChan chan *Register.Service
+
+	registryServiceMap map[string]*RegisterService
+}
+
+type RegisterService struct {
+	id          clientv3.LeaseID
+	service     *Register.Service
+	registered  bool
+	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse
 }
 
 var (
 	etcdRegistry *EtcdRegistry = &EtcdRegistry{
-		serviceChan: make(chan *Register.Service, 8),
+		serviceChan:        make(chan *Register.Service, MaxServiceNum),
+		registryServiceMap: make(map[string]*RegisterService, MaxServiceNum),
 	}
 )
 
@@ -61,9 +76,75 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *Register.Service
 }
 
 func (e *EtcdRegistry) run() {
+	select {
+	case service := <-e.serviceChan:
+		_, ok := e.registryServiceMap[service.Name]
+		if ok {
+			break
+		}
+		registryService := &RegisterService{
+			service: service,
+		}
+		e.registryServiceMap[service.Name] = registryService
+	default:
+		e.registryOrKeepAlive()
+		time.Sleep(time.Millisecond * 500)
+
+	}
+}
+
+func (e *EtcdRegistry) registryOrKeepAlive() {
+	for _, registryService := range e.registryServiceMap {
+		if registryService.registered {
+			e.keepAlive(registryService)
+			continue
+		}
+
+		e.registerService(registryService)
+	}
+}
+
+func (e *EtcdRegistry) keepAlive(registryService *RegisterService) {
 
 }
 
-func (e *EtcdRegistry) servicePath(service *Register.Service) string {
-	return path.Join(e.options.RegistryPath, service.Name)
+func (e *EtcdRegistry) registerService(registryService *RegisterService) {
+	resp, err := e.client.Grant(context.TODO(), e.options.HeartBeat)
+	if err != nil {
+		log.Fatal(err)
+	}
+	registryService.id = resp.ID
+	for _, node := range registryService.service.Nodes {
+		tmp := &Register.Service{
+			Name: registryService.service.Name,
+			Nodes: []*Register.Node{
+				node,
+			},
+		}
+
+		data, err := json.Marshal(tmp)
+		if err != nil {
+			continue
+		}
+		key := e.serviceNodePath(tmp)
+		_, err = e.client.Put(context.TODO(), key, string(data), clientv3.WithLease(resp.ID))
+		if err != nil {
+			continue
+		}
+
+		ch, err := e.client.KeepAlive(context.TODO(), resp.ID)
+		if err != nil {
+			continue
+		}
+
+		registryService.keepAliveCh = ch
+
+		registryService.registered = true
+	}
+
+}
+
+func (e *EtcdRegistry) serviceNodePath(service *Register.Service) string {
+	nodeIp := fmt.Sprintf("%s:%d", service.Nodes[0].Ip, service.Nodes[0].Port)
+	return path.Join(e.options.RegistryPath, service.Name, nodeIp)
 }
