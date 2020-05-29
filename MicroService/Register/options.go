@@ -3,8 +3,10 @@ package Register
 import "time"
 
 type Options struct {
-	Addrs   []string
-	TimeOut time.Duration
+	Addrs        []string
+	TimeOut      time.Duration
+	RegistryPath string
+	HeartBeat    int64
 }
 
 type Option func(opts *Options)
