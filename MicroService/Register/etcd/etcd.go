@@ -76,21 +76,24 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *Register.Service
 }
 
 func (e *EtcdRegistry) run() {
-	select {
-	case service := <-e.serviceChan:
-		_, ok := e.registryServiceMap[service.Name]
-		if ok {
-			break
-		}
-		registryService := &RegisterService{
-			service: service,
-		}
-		e.registryServiceMap[service.Name] = registryService
-	default:
-		e.registryOrKeepAlive()
-		time.Sleep(time.Millisecond * 500)
+	for {
+		select {
+		case service := <-e.serviceChan:
+			_, ok := e.registryServiceMap[service.Name]
+			if ok {
+				break
+			}
+			registryService := &RegisterService{
+				service: service,
+			}
+			e.registryServiceMap[service.Name] = registryService
+		default:
+			e.registryOrKeepAlive()
+			time.Sleep(time.Millisecond * 500)
 
+		}
 	}
+
 }
 
 func (e *EtcdRegistry) registryOrKeepAlive() {
@@ -105,7 +108,16 @@ func (e *EtcdRegistry) registryOrKeepAlive() {
 }
 
 func (e *EtcdRegistry) keepAlive(registryService *RegisterService) {
-
+	select {
+	case resp := <-registryService.keepAliveCh:
+		if resp == nil {
+			registryService.registered = false
+			return
+		}
+		log.Printf("service:%s node:%s port:%v", registryService.service.Name,
+			registryService.service.Nodes[0].Ip, registryService.service.Nodes[0].Port)
+	}
+	return
 }
 
 func (e *EtcdRegistry) registerService(registryService *RegisterService) {
