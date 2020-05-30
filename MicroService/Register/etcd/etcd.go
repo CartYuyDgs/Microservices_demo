@@ -14,6 +14,7 @@ import (
 )
 
 const MaxServiceNum = 8
+const MaxSyncServiceInterval = time.Second * 5
 
 type EtcdRegistry struct {
 	options     *Register.Options
@@ -44,7 +45,7 @@ var (
 )
 
 func init() {
-	allService := AllServiceInfo{
+	allService := &AllServiceInfo{
 		serviceMap: make(map[string]*Register.Service, MaxServiceNum),
 	}
 	etcdRegistry.value.Store(allService)
@@ -88,17 +89,26 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *Register.Service
 }
 
 func (e *EtcdRegistry) run() {
+	ticker := time.NewTicker(MaxSyncServiceInterval)
 	for {
 		select {
 		case service := <-e.serviceChan:
-			_, ok := e.registryServiceMap[service.Name]
+			registerService, ok := e.registryServiceMap[service.Name]
 			if ok {
+				for _, node := range service.Nodes {
+					registerService.service.Nodes = append(registerService.service.Nodes, node)
+				}
+				registerService.registered = false
 				break
 			}
 			registryService := &RegisterService{
 				service: service,
 			}
 			e.registryServiceMap[service.Name] = registryService
+		case <-ticker.C:
+			//log.Println("update start....")
+			e.syncServiceFromEtcd()
+
 		default:
 			e.registryOrKeepAlive()
 			time.Sleep(time.Millisecond * 500)
@@ -163,14 +173,13 @@ func (e *EtcdRegistry) registerService(registryService *RegisterService) {
 		}
 
 		registryService.keepAliveCh = ch
-
 		registryService.registered = true
 	}
 
 }
 
 func (e *EtcdRegistry) getServiceInfoFromCache(ctx context.Context, name string) (service *Register.Service, ok bool) {
-	allServiceInfo := e.value.Load().(AllServiceInfo)
+	allServiceInfo := e.value.Load().(*AllServiceInfo)
 	service, ok = allServiceInfo.serviceMap[name]
 	return
 }
@@ -181,7 +190,7 @@ func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *Re
 	//缓存请求
 	service, ok := e.getServiceInfoFromCache(ctx, name)
 	if ok {
-		fmt.Printf("cache: name:%s,port:%d, \n", service.Name, service.Nodes[0].Port)
+		//log.Printf("cache: name:%s, %v\n", service.Name, ok)
 		return
 	}
 
@@ -191,10 +200,16 @@ func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *Re
 
 	service, ok = e.getServiceInfoFromCache(ctx, name)
 	if ok {
+		//log.Printf("cache2: name:%s, \n", service.Name)
 		return
 	}
 
+	var allServiceInfoNew = &AllServiceInfo{
+		serviceMap: make(map[string]*Register.Service, MaxServiceNum),
+	}
+
 	key := e.servicePath(name)
+	//log.Printf("get key:%s\n",key)
 	resp, err := e.client.Get(context.TODO(), key, clientv3.WithPrefix())
 	if err != nil {
 		return
@@ -203,13 +218,19 @@ func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *Re
 	service = &Register.Service{
 		Name: name,
 	}
+	if len(resp.Kvs) == 0 {
+		return
+	}
+
+	//log.Printf("resp %v: name: %s, key %v,\n",resp,name,resp.Kvs)
 	for _, val := range resp.Kvs {
-		//fmt.Printf("etcd: index:%d,key:%s,value:%s \n",index, val.Key, val.Value)
+		//log.Printf("etcd: key:%s,value:%s \n", val.Key, val.Value)
 		value := val.Value
 		var tmp Register.Service
 
 		err = json.Unmarshal(value, &tmp)
 		if err != nil {
+			//log.Println("unmarshal error")
 			return
 		}
 
@@ -219,8 +240,13 @@ func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *Re
 
 	}
 
-	allServiceInfo := e.value.Load().(AllServiceInfo)
-	allServiceInfo.serviceMap[name] = service
+	allServiceInfo := e.value.Load().(*AllServiceInfo)
+	//log.Printf("update ...%d.. allServiceInfo",len(allServiceInfo.serviceMap))
+	for keys, vals := range allServiceInfo.serviceMap {
+		allServiceInfoNew.serviceMap[keys] = vals
+	}
+	allServiceInfoNew.serviceMap[name] = service
+	e.value.Store(allServiceInfoNew)
 	return
 
 }
@@ -232,4 +258,44 @@ func (e *EtcdRegistry) serviceNodePath(service *Register.Service) string {
 
 func (e *EtcdRegistry) servicePath(name string) string {
 	return path.Join(e.options.RegistryPath[0], name)
+}
+
+func (e *EtcdRegistry) syncServiceFromEtcd() {
+	allServiceInfo := e.value.Load().(*AllServiceInfo)
+
+	var allServiceInfoNew = &AllServiceInfo{
+		serviceMap: make(map[string]*Register.Service, MaxServiceNum),
+	}
+
+	for _, service := range allServiceInfo.serviceMap {
+		key := e.servicePath(service.Name)
+		resp, err := e.client.Get(context.TODO(), key, clientv3.WithPrefix())
+		if err != nil {
+			allServiceInfoNew.serviceMap[service.Name] = service
+			continue
+		}
+
+		serviceNew := &Register.Service{
+			Name: service.Name,
+		}
+		for _, val := range resp.Kvs {
+			//fmt.Printf("etcd: index:%d,key:%s,value:%s \n",index, val.Key, val.Value)
+			value := val.Value
+			var tmp Register.Service
+
+			err = json.Unmarshal(value, &tmp)
+			if err != nil {
+				return
+			}
+
+			for _, node := range tmp.Nodes {
+				serviceNew.Nodes = append(serviceNew.Nodes, node)
+			}
+		}
+
+		allServiceInfoNew.serviceMap[serviceNew.Name] = serviceNew
+	}
+
+	e.value.Store(allServiceInfoNew)
+	log.Printf("update background all service successful, len %d\n", len(allServiceInfoNew.serviceMap))
 }

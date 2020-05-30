@@ -4,6 +4,7 @@ import (
 	"Microservices_demo/MicroService/Register"
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 )
@@ -36,19 +37,31 @@ func TestEtcdRegistry_Register(t *testing.T) {
 	)
 
 	registryInst.Register(context.TODO(), service)
-	//var num = 6;
+
+	go func() {
+		time.Sleep(10 * time.Second)
+
+		service.Nodes = append(service.Nodes, &Register.Node{
+			Ip: "127.0.0.8", Port: 8801,
+		}, &Register.Node{
+			Ip: "127.0.0.3", Port: 8802,
+		})
+
+		registryInst.Register(context.TODO(), service)
+	}()
+
 	for {
 		service, err = registryInst.GetService(context.TODO(), "comment_services")
 		if err != nil {
 			t.Errorf("get service failed err: %v", err)
 			return
 		}
+		for _, v := range service.Nodes {
+			log.Printf("name %s, port %d, ip %s\n", service.Name, v.Port, v.Ip)
+		}
 		fmt.Printf("service %#v\n", service)
 		time.Sleep(time.Second)
-		//num --
-		//if num <0 {
-		//	break
-		//}
+
 	}
 
 	return
