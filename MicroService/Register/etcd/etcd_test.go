@@ -24,6 +24,7 @@ func TestEtcdRegistry_Register(t *testing.T) {
 		return
 	}
 
+	//服务
 	service := &Register.Service{
 		Name: "comment_services",
 	}
