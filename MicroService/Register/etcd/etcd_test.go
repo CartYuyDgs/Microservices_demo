@@ -3,6 +3,7 @@ package etcd
 import (
 	"Microservices_demo/MicroService/Register"
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -35,8 +36,19 @@ func TestEtcdRegistry_Register(t *testing.T) {
 	)
 
 	registryInst.Register(context.TODO(), service)
+	//var num = 6;
 	for {
+		service, err = registryInst.GetService(context.TODO(), "comment_services")
+		if err != nil {
+			t.Errorf("get service failed err: %v", err)
+			return
+		}
+		fmt.Printf("service %#v\n", service)
 		time.Sleep(time.Second)
+		//num --
+		//if num <0 {
+		//	break
+		//}
 	}
 
 	return

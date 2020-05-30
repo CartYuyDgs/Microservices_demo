@@ -8,6 +8,8 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"log"
 	"path"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,7 +20,13 @@ type EtcdRegistry struct {
 	client      *clientv3.Client
 	serviceChan chan *Register.Service
 
+	value              atomic.Value
+	lock               sync.Mutex
 	registryServiceMap map[string]*RegisterService
+}
+
+type AllServiceInfo struct {
+	serviceMap map[string]*Register.Service
 }
 
 type RegisterService struct {
@@ -36,6 +44,10 @@ var (
 )
 
 func init() {
+	allService := AllServiceInfo{
+		serviceMap: make(map[string]*Register.Service, MaxServiceNum),
+	}
+	etcdRegistry.value.Store(allService)
 	Register.RegisterPlugin(etcdRegistry)
 	go etcdRegistry.run()
 }
@@ -157,7 +169,67 @@ func (e *EtcdRegistry) registerService(registryService *RegisterService) {
 
 }
 
+func (e *EtcdRegistry) getServiceInfoFromCache(ctx context.Context, name string) (service *Register.Service, ok bool) {
+	allServiceInfo := e.value.Load().(AllServiceInfo)
+	service, ok = allServiceInfo.serviceMap[name]
+	return
+}
+
+func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *Register.Service, err error) {
+	//后台更新
+
+	//缓存请求
+	service, ok := e.getServiceInfoFromCache(ctx, name)
+	if ok {
+		fmt.Printf("cache: name:%s,port:%d, \n", service.Name, service.Nodes[0].Port)
+		return
+	}
+
+	//如果缓存中没有service 从etcd中读取
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	service, ok = e.getServiceInfoFromCache(ctx, name)
+	if ok {
+		return
+	}
+
+	key := e.servicePath(name)
+	resp, err := e.client.Get(context.TODO(), key, clientv3.WithPrefix())
+	if err != nil {
+		return
+	}
+
+	service = &Register.Service{
+		Name: name,
+	}
+	for _, val := range resp.Kvs {
+		//fmt.Printf("etcd: index:%d,key:%s,value:%s \n",index, val.Key, val.Value)
+		value := val.Value
+		var tmp Register.Service
+
+		err = json.Unmarshal(value, &tmp)
+		if err != nil {
+			return
+		}
+
+		for _, node := range tmp.Nodes {
+			service.Nodes = append(service.Nodes, node)
+		}
+
+	}
+
+	allServiceInfo := e.value.Load().(AllServiceInfo)
+	allServiceInfo.serviceMap[name] = service
+	return
+
+}
+
 func (e *EtcdRegistry) serviceNodePath(service *Register.Service) string {
 	nodeIp := fmt.Sprintf("%s:%d", service.Nodes[0].Ip, service.Nodes[0].Port)
 	return path.Join(e.options.RegistryPath[0], service.Name, nodeIp)
+}
+
+func (e *EtcdRegistry) servicePath(name string) string {
+	return path.Join(e.options.RegistryPath[0], name)
 }
