@@ -5,7 +5,7 @@ import "time"
 type Options struct {
 	Addrs        []string
 	TimeOut      time.Duration
-	RegistryPath string
+	RegistryPath []string
 	HeartBeat    int64
 }
 
@@ -20,5 +20,17 @@ func WithTimeOut(timeout time.Duration) Option {
 func WithAddres(addrs []string) Option {
 	return func(opts *Options) {
 		opts.Addrs = addrs
+	}
+}
+
+func WithRegistryPath(path []string) Option {
+	return func(opts *Options) {
+		opts.RegistryPath = path
+	}
+}
+
+func WithRegistryHeartBeat(beat int64) Option {
+	return func(opts *Options) {
+		opts.HeartBeat = beat
 	}
 }

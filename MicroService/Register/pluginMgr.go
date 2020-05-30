@@ -37,13 +37,12 @@ func (p *PluginMgr) initRegistry(ctx context.Context, name string, opts ...Optio
 	defer p.lock.Unlock()
 
 	plugin, ok := p.plugins[name]
-	if ok {
-		log.Fatalf("Error %v", ok)
+	if !ok {
+		log.Fatalf("Error initRegistry %v", ok)
 		return
 	}
-
 	registry = plugin
-	err = plugin.Init(ctx, opts...)
+	err = registry.Init(ctx, opts...)
 	return
 
 }
@@ -53,5 +52,5 @@ func RegisterPlugin(registry Registry) (err error) {
 }
 
 func InitRegistry(ctx context.Context, name string, opts ...Option) (registry Registry, err error) {
-	return pluginMgr.initRegistry(ctx, name)
+	return pluginMgr.initRegistry(ctx, name, opts...)
 }

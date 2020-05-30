@@ -139,6 +139,7 @@ func (e *EtcdRegistry) registerService(registryService *RegisterService) {
 			continue
 		}
 		key := e.serviceNodePath(tmp)
+		log.Printf("register Key:%s\n", key)
 		_, err = e.client.Put(context.TODO(), key, string(data), clientv3.WithLease(resp.ID))
 		if err != nil {
 			continue
@@ -158,5 +159,5 @@ func (e *EtcdRegistry) registerService(registryService *RegisterService) {
 
 func (e *EtcdRegistry) serviceNodePath(service *Register.Service) string {
 	nodeIp := fmt.Sprintf("%s:%d", service.Nodes[0].Ip, service.Nodes[0].Port)
-	return path.Join(e.options.RegistryPath, service.Name, nodeIp)
+	return path.Join(e.options.RegistryPath[0], service.Name, nodeIp)
 }
