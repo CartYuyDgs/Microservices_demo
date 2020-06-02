@@ -6,7 +6,8 @@ type Service struct {
 }
 
 type Node struct {
-	Id   string `json:"id"`
-	Ip   string `json:"ip"`
-	Port int    `json:"port"`
+	Id     string `json:"id"`
+	Ip     string `json:"ip"`
+	Port   int    `json:"port"`
+	Weight int    `json:"weight"`
 }
