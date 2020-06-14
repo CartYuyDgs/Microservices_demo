@@ -61,15 +61,17 @@ func (c *ContralGenerator) generateRpc(opt *Option) (err error) {
 	fmt.Fprintf(file, "package controller\n\n")
 
 	fmt.Fprintf(file, "import (\n")
-	fmt.Fprintf(file, "\"	context\" \n")
+
 	fmt.Fprintf(file, `	hello "Microservices_demo/tools/output/generate"`)
+	fmt.Fprintf(file, "\n")
+	fmt.Fprintf(file, "	\"context\" \n")
 	fmt.Fprintf(file, "\n) \n\n")
 
-	fmt.Fprintf(file, "type server struct{}\n\n")
+	fmt.Fprintf(file, "type Server struct{}\n\n")
 	for _, method := range c.rpc {
-		fmt.Fprintf(file, "func (s *server) %s("+
+		fmt.Fprintf(file, "func (s *Server) %s("+
 			" ctx context.Context, r *hello.%s)(resp *hello.%s, err error){ \n return \n}\n\n", method.Name,
-			method.RequestType, method.RequestType)
+			method.RequestType, method.ReturnsType)
 	}
 	return
 }
