@@ -2,14 +2,10 @@ package main
 
 import "fmt"
 
-var generatorMgr *GeneratorMgr
+var generatorMgr *GeneratorMgr = &GeneratorMgr{genMap: make(map[string]Generator)}
 
 type GeneratorMgr struct {
 	genMap map[string]Generator
-}
-
-func init() {
-	generatorMgr = &GeneratorMgr{genMap: make(map[string]Generator)}
 }
 
 func Register(name string, gen Generator) (err error) {
