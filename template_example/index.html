@@ -10,5 +10,9 @@
     {{else}}
         <p>hello yang man {{.Name}}</p>
     {{end}}
+
+    {{with .Name}}
+        <p>this is with example ,name {{.}}</p>
+    {{end}}
 </body>
 </html>
