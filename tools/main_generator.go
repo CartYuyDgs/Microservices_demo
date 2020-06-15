@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 	"path"
@@ -24,34 +25,21 @@ func (g *MainGenerator) Run(opt *Option) (err error) {
 	}
 
 	defer file.Close()
-
-	fmt.Fprintf(file, "package main\n\n")
-
-	fmt.Fprintf(file, "import (\n")
-
-	fmt.Fprintf(file, "	\"Microservices_demo/tools/output/controller\" \n")
-	fmt.Fprintf(file, `	hello "Microservices_demo/tools/output/generate"`)
-	fmt.Fprintf(file, "\n")
-	fmt.Fprintf(file, "	\"google.golang.org/grpc\"\n")
-	fmt.Fprintf(file, "	\"log\" \n")
-	fmt.Fprintf(file, "	\"net\" \n")
-
-	fmt.Fprintf(file, "\n) \n\n")
-
-	fmt.Fprintf(file, "var server = &controller.Server{}\n\n")
-
-	fmt.Fprintf(file, "\n\n")
-
-	fmt.Fprintf(file, `
-func main() {
-	lis, err := net.Listen("tcp", ":8080")
+	err = g.render(file, main_template)
 	if err != nil {
-		log.Fatal("failed to listen: %v ", err)
+		fmt.Println("render failed , err %v\n", err)
+		return
 	}
-	s := grpc.NewServer()
-	hello.RegisterHelloServiceServer(s, server)
-	s.Serve(lis)
+	return
 }
-	`)
+
+func (g *MainGenerator) render(file *os.File, data string) (err error) {
+
+	temp := template.New("main")
+	t, err := temp.Parse(data)
+	if err != nil {
+		return
+	}
+	t.Execute(file, nil)
 	return
 }
