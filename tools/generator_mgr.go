@@ -20,9 +20,10 @@ func Register(name string, gen Generator) (err error) {
 }
 
 func (g *GeneratorMgr) Run(opt *Option) (err error) {
+	var metaData = &ServiceMateData{}
 	for _, gen := range g.genMap {
 
-		err := gen.Run(opt)
+		err := gen.Run(opt, metaData)
 		if err != nil {
 			return err
 		}

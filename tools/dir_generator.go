@@ -22,7 +22,7 @@ type DirGenerator struct {
 	dirList []string
 }
 
-func (d *DirGenerator) Run(opt *Option) (err error) {
+func (d *DirGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
 	for _, dir := range ALLDirList {
 		fullDir := path.Join(opt.Output, dir)
 		err := os.MkdirAll(fullDir, 0755)
@@ -35,8 +35,8 @@ func (d *DirGenerator) Run(opt *Option) (err error) {
 }
 
 func init() {
-	dir := &DirGenerator{
-		dirList: ALLDirList,
-	}
-	Register("dirGenerator", dir)
+	//dir := &DirGenerator{
+	//	dirList: ALLDirList,
+	//}
+	//Register("dirGenerator", dir)
 }

@@ -16,7 +16,7 @@ func init() {
 	Register("grpc generator", grpc)
 }
 
-func (g *GrpcGenerator) Run(opt *Option) (err error) {
+func (g *GrpcGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
 	//D:\code\go\bin\proto  --go_out=plugins=grpc:. hello.proto
 	//log.Println("grpc run")
 

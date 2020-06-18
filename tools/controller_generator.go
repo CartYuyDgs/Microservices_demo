@@ -19,7 +19,7 @@ func init() {
 	Register("controller generator", c)
 }
 
-func (c *ContralGenerator) Run(opt *Option) (err error) {
+func (c *ContralGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
 
 	reader, err := os.Open(opt.Proto3Filename)
 	if err != nil {

@@ -16,7 +16,7 @@ func init() {
 	Register("main generator", main)
 }
 
-func (g *MainGenerator) Run(opt *Option) (err error) {
+func (g *MainGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
 	filename := path.Join(opt.Output, "main", fmt.Sprintf("main.go"))
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
