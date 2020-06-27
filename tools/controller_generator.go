@@ -6,12 +6,16 @@ import (
 	"log"
 	"os"
 	"path"
+	"text/template"
 )
 
 type ContralGenerator struct {
-	Service *proto.Service
-	Mesage  []*proto.Message
-	Rpc     []*proto.RPC
+}
+
+type RpcMeta struct {
+	Rpc     *proto.RPC
+	Package *proto.Package
+	Prefix  string
 }
 
 func init() {
@@ -21,68 +25,62 @@ func init() {
 
 func (c *ContralGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
 
-	//reader, err := os.Open(opt.Proto3Filename)
-	//if err != nil {
-	//	log.Printf("openfile  %s failed, err %v", opt.Proto3Filename, err)
-	//	return
-	//}
-	//
-	//defer reader.Close()
-	//
-	//parser := proto.NewParser(reader)
-	//definition, err := parser.Parse()
-	//if err != nil {
-	//	log.Printf("parse file  %s failed, err %v", opt.Proto3Filename, err)
-	//	return
-	//}
-	//
-	//proto.Walk(
-	//	definition,
-	//	proto.WithService(c.handleService),
-	//	proto.WithMessage(c.handleMessage),
-	//	proto.WithRPC(c.handleRpc))
-	//
-	////log.Println("parse proto success, rpc； ",c.rpc)
-	//return c.generateRpc(opt)
-	return
-}
-
-func (c *ContralGenerator) generateRpc(opt *Option) (err error) {
-
-	filename := path.Join(opt.Output, "controller", fmt.Sprintf("%s.go", c.Service.Name))
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
+	reader, err := os.Open(opt.Proto3Filename)
 	if err != nil {
-		log.Println("open file %s failed, err %v", filename, err)
+		log.Printf("openfile  %s failed, err %v", opt.Proto3Filename, err)
 		return
 	}
 
-	defer file.Close()
-	fmt.Fprintf(file, "package controller\n\n")
+	defer reader.Close()
+	return c.generateRpc(opt, mateData)
+}
 
-	fmt.Fprintf(file, "import (\n")
+func (c *ContralGenerator) generateRpc(opt *Option, mateData *ServiceMateData) (err error) {
 
-	fmt.Fprintf(file, `	hello "Microservices_demo/tools/output/generate"`)
-	fmt.Fprintf(file, "\n")
-	fmt.Fprintf(file, "	\"context\" \n")
-	fmt.Fprintf(file, "\n) \n\n")
+	for _, rpc := range mateData.Rpc {
+		filename := path.Join("./", opt.Output, "controller", fmt.Sprintf("%s.go", rpc.Name))
 
-	fmt.Fprintf(file, "type Server struct{}\n\n")
-	for _, method := range c.Rpc {
-		fmt.Fprintf(file, "func (s *Server) %s("+
-			" ctx context.Context, r *hello.%s)(resp *hello.%s, err error){ \n return \n}\n\n", method.Name,
-			method.RequestType, method.ReturnsType)
+		file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			fmt.Printf("openfile %s failed, err: %v\n", filename, err)
+			return err
+		}
+
+		defer file.Close()
+		rpcMeta := &RpcMeta{}
+		rpcMeta.Package = mateData.Package
+		rpcMeta.Rpc = rpc
+		rpcMeta.Prefix = mateData.Prefix
+		err = c.render(file, controller_template, rpcMeta)
+		if err != nil {
+			fmt.Printf("render CONTROLLER failed, err:%v\n", err)
+			return err
+		}
+
 	}
+
+	return nil
+}
+
+func (c *ContralGenerator) render(file *os.File, data string, metaData *RpcMeta) (err error) {
+	t := template.New("main")
+	t, err = t.Parse(data)
+	if err != nil {
+		return
+	}
+
+	err = t.Execute(file, metaData)
 	return
 }
 
 //func (c *ContralGenerator) handleService(s *proto.Service) {
 //	//fmt.Println(s.Name)
-//	c.service = s
+//	c = s
 //}
 //
 //func (c *ContralGenerator) handleMessage(m *proto.Message) {
 //	//fmt.Println(m.Name)
-//	c.mesage = append(c.mesage, m)
+//	c.Mesage = append(c.Mesage, m)
 //}
 //
 //func (c *ContralGenerator) handleRpc(r *proto.RPC) {
@@ -91,5 +89,5 @@ func (c *ContralGenerator) generateRpc(opt *Option) (err error) {
 //	//fmt.Println(r.ReturnsType)
 //	//fmt.Println(r.Comment)
 //
-//	c.rpc = append(c.rpc, r)
+//	c.Rpc = append(c.Rpc, r)
 //}

@@ -14,7 +14,8 @@ import(
 	
 type RouterServer struct{}
 {{range .Rpc}}
-func (s *RouterServer) {{.Name}}(ctx context.Context, r*{{$.Package.Name}}.{{.RequestType}})(resp*{{$.Package.Name}}.{{.ReturnsType}}, err error){
+func (s *RouterServer) {{.Name}}(ctx context.Context, r*{{$.Package.Name}}
+.{{.RequestType}})(resp*{{$.Package.Name}}.{{.ReturnsType}}, err error){
 	return
 }
 
