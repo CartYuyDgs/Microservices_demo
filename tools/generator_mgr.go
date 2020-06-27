@@ -40,6 +40,7 @@ func (g *GeneratorMgr) Run(opt *Option) (err error) {
 		return
 	}
 
+	g.metaData.Prefix = opt.Prefix
 	for _, gen := range g.genMap {
 
 		err := gen.Run(opt, g.metaData)
@@ -82,7 +83,10 @@ func (g *GeneratorMgr) parseService(opt *Option) (err error) {
 		definition,
 		proto.WithService(g.handleService),
 		proto.WithMessage(g.handleMessage),
-		proto.WithRPC(g.handleRpc))
+		proto.WithRPC(g.handleRpc),
+		proto.WithPackage(g.handlePackage),
+		proto.WithOption(g.handleOption),
+	)
 
 	//log.Println("parse proto success, rpc； ",c.rpc)
 	//return c.generateRpc(opt)
@@ -101,4 +105,13 @@ func (g *GeneratorMgr) handleMessage(m *proto.Message) {
 
 func (g *GeneratorMgr) handleRpc(r *proto.RPC) {
 	g.metaData.Rpc = append(g.metaData.Rpc, r)
+}
+
+func (g *GeneratorMgr) handlePackage(r *proto.Package) {
+	g.metaData.Package = r
+	//g.metaData.Service.Name = g.metaData.Package.Name
+}
+
+func (g *GeneratorMgr) handleOption(r *proto.Option) {
+
 }

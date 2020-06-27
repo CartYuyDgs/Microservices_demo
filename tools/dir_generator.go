@@ -1,11 +1,5 @@
 package main
 
-import (
-	"log"
-	"os"
-	"path"
-)
-
 var ALLDirList []string = []string{
 	"controller",
 	"idl",
@@ -16,22 +10,11 @@ var ALLDirList []string = []string{
 	"app/config",
 	"model",
 	"generate",
+	"router",
 }
 
 type DirGenerator struct {
 	dirList []string
-}
-
-func (d *DirGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) {
-	for _, dir := range ALLDirList {
-		fullDir := path.Join(opt.Output, dir)
-		err := os.MkdirAll(fullDir, 0755)
-		if err != nil {
-			log.Println("mkdir dir err:", err)
-			return err
-		}
-	}
-	return
 }
 
 func init() {

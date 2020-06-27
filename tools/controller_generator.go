@@ -9,9 +9,9 @@ import (
 )
 
 type ContralGenerator struct {
-	service *proto.Service
-	mesage  []*proto.Message
-	rpc     []*proto.RPC
+	Service *proto.Service
+	Mesage  []*proto.Message
+	Rpc     []*proto.RPC
 }
 
 func init() {
@@ -49,7 +49,7 @@ func (c *ContralGenerator) Run(opt *Option, mateData *ServiceMateData) (err erro
 
 func (c *ContralGenerator) generateRpc(opt *Option) (err error) {
 
-	filename := path.Join(opt.Output, "controller", fmt.Sprintf("%s.go", c.service.Name))
+	filename := path.Join(opt.Output, "controller", fmt.Sprintf("%s.go", c.Service.Name))
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		log.Println("open file %s failed, err %v", filename, err)
@@ -67,7 +67,7 @@ func (c *ContralGenerator) generateRpc(opt *Option) (err error) {
 	fmt.Fprintf(file, "\n) \n\n")
 
 	fmt.Fprintf(file, "type Server struct{}\n\n")
-	for _, method := range c.rpc {
+	for _, method := range c.Rpc {
 		fmt.Fprintf(file, "func (s *Server) %s("+
 			" ctx context.Context, r *hello.%s)(resp *hello.%s, err error){ \n return \n}\n\n", method.Name,
 			method.RequestType, method.ReturnsType)
