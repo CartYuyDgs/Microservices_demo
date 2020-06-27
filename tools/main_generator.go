@@ -25,7 +25,7 @@ func (g *MainGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) 
 	}
 
 	defer file.Close()
-	err = g.render(file, main_template)
+	err = g.render(file, main_template, mateData)
 	if err != nil {
 		fmt.Println("render failed , err %v\n", err)
 		return
@@ -33,13 +33,13 @@ func (g *MainGenerator) Run(opt *Option, mateData *ServiceMateData) (err error) 
 	return
 }
 
-func (g *MainGenerator) render(file *os.File, data string) (err error) {
+func (g *MainGenerator) render(file *os.File, data string, metadata *ServiceMateData) (err error) {
 
 	temp := template.New("main")
 	t, err := temp.Parse(data)
 	if err != nil {
 		return
 	}
-	t.Execute(file, nil)
+	t.Execute(file, metadata)
 	return
 }

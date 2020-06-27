@@ -7,7 +7,7 @@ type Generator interface {
 }
 
 type ServiceMateData struct {
-	service *proto.Service
-	message []*proto.Message
-	rpc     []*proto.RPC
+	Service *proto.Service
+	Message []*proto.Message
+	Rpc     []*proto.RPC
 }
