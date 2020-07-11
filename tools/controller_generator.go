@@ -72,22 +72,3 @@ func (c *ContralGenerator) render(file *os.File, data string, metaData *RpcMeta)
 	err = t.Execute(file, metaData)
 	return
 }
-
-//func (c *ContralGenerator) handleService(s *proto.Service) {
-//	//fmt.Println(s.Name)
-//	c = s
-//}
-//
-//func (c *ContralGenerator) handleMessage(m *proto.Message) {
-//	//fmt.Println(m.Name)
-//	c.Mesage = append(c.Mesage, m)
-//}
-//
-//func (c *ContralGenerator) handleRpc(r *proto.RPC) {
-//	//fmt.Println(r.Name)
-//	//fmt.Println(r.RequestType)
-//	//fmt.Println(r.ReturnsType)
-//	//fmt.Println(r.Comment)
-//
-//	c.Rpc = append(c.Rpc, r)
-//}

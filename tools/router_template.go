@@ -10,12 +10,25 @@ import(
 	{{else}}
 	"{{.Prefix}}/{{.Package.Name}}"
 	{{end}}
+	
+	{{if not .Prefix}}
+	"controller"
+	{{else}}
+	"{{.Prefix}}/controller"
+	{{end}}
+
 )
 	
 type RouterServer struct{}
 {{range .Rpc}}
-func (s *RouterServer) {{.Name}}(ctx context.Context, r*{{$.Package.Name}}
-.{{.RequestType}})(resp*{{$.Package.Name}}.{{.ReturnsType}}, err error){
+func (s *RouterServer) {{.Name}}(ctx context.Context, r* {{$.Package.Name}}.{{.RequestType}})(resp* {{$.Package.Name}}.{{.ReturnsType}}, err error){
+	inst := &{{.Name}}Controller{}
+	err = inst.CheckParams(ctx, r)
+	if err != nil {
+		return 
+	}
+
+	resp, err = inst.Run(ctx, r)
 	return
 }
 
