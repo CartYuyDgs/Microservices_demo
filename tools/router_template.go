@@ -6,11 +6,11 @@ package router
 import(
 	"context"
 	{{if not .Prefix}}
-	"{{.Package.Name}}"
+	"generate/{{.Package.Name}}"
 	{{else}}
-	"{{.Prefix}}/{{.Package.Name}}"
+	{{.Package.Name}} "{{.Prefix}}/generate"
 	{{end}}
-	
+
 	{{if not .Prefix}}
 	"controller"
 	{{else}}
@@ -22,13 +22,13 @@ import(
 type RouterServer struct{}
 {{range .Rpc}}
 func (s *RouterServer) {{.Name}}(ctx context.Context, r* {{$.Package.Name}}.{{.RequestType}})(resp* {{$.Package.Name}}.{{.ReturnsType}}, err error){
-	inst := &{{.Name}}Controller{}
-	err = inst.CheckParams(ctx, r)
+	ctrl := &controller.{{.Name}}Controller{}
+	resp ,err = ctrl.CheckParams(ctx, r)
 	if err != nil {
 		return 
 	}
 
-	resp, err = inst.Run(ctx, r)
+	resp, err = ctrl.Run(ctx, r)
 	return
 }
 

@@ -4,14 +4,30 @@ var main_template = `
 package main
 
 import (
-	"Microservices_demo/tools/output/controller"
-	hello "Microservices_demo/tools/output/generate"
+
+	{{if not .Prefix}}
+	"generate/{{.Package.Name}}"
+	{{else}}
+	{{.Package.Name}} "{{.Prefix}}/generate"
+	{{end}}
+
+	{{if not .Prefix}}
+	"controller"
+	{{else}}
+	"{{.Prefix}}/router"
+	{{end}}
+
+	//{{if not .Prefix}}
+	//"controller"
+	//{{else}}
+	//"{{.Prefix}}/controller"
+	//{{end}}
 	"google.golang.org/grpc"
 	"log"
 	"net"
 )
 
-var server = &controller.Server{}
+var server = &router.RouterServer{}
 
 func main() {
 	lis, err := net.Listen("tcp", ":8080")

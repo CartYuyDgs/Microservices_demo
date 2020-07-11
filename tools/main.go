@@ -21,12 +21,12 @@ func main() {
 			Destination: &opt.Proto3Filename,
 		},
 
-		cli.StringFlag{
-			Name:        "o",
-			Value:       "./output",
-			Usage:       "output dir",
-			Destination: &opt.Output,
-		},
+		//cli.StringFlag{
+		//	Name:        "o",
+		//	Value:       "./output",
+		//	Usage:       "output dir",
+		//	Destination: &opt.Output,
+		//},
 
 		cli.BoolFlag{
 			Name:        "c",

@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 var generatorMgr *GeneratorMgr = &GeneratorMgr{
@@ -29,7 +32,48 @@ func Register(name string, gen Generator) (err error) {
 	return
 }
 
+func (g *GeneratorMgr) initOptout(opt *Option) (err error) {
+	goPath := os.Getenv("GOPATH")
+	if len(opt.Prefix) > 0 {
+		if goPath[(len(goPath)-1)] != '/' {
+			goPath = fmt.Sprintf("%s/src/", goPath)
+		}
+		opt.Output = path.Join(os.Getenv("GOPATH"), opt.Prefix)
+		return
+	}
+
+	exeFilePath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return
+	}
+
+	if runtime.GOOS == "windows" {
+		exeFilePath = strings.Replace(exeFilePath, "\\", "/", -1)
+		goPath = strings.Replace(goPath, "\\", "/", -1)
+	}
+
+	lastIdx := strings.LastIndex(exeFilePath, "/")
+	if lastIdx < 0 {
+		return
+	}
+	opt.Output = exeFilePath[0:lastIdx]
+
+	opt.Output = path.Join(opt.Output, "/output/")
+	//goPath = strings.ToLower(goPath)
+	opt.Prefix = strings.Replace(opt.Output, goPath, "", -1)
+	opt.Prefix = strings.Replace(opt.Prefix, "/src/", "", -1)
+	log.Println(goPath)
+	log.Println(opt.Output)
+	log.Println(opt.Prefix)
+	return
+}
+
 func (g *GeneratorMgr) Run(opt *Option) (err error) {
+	err = g.initOptout(opt)
+	if err != nil {
+		return
+	}
+
 	err = g.parseService(opt)
 	if err != nil {
 		return
