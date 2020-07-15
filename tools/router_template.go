@@ -16,16 +16,29 @@ import(
 	{{else}}
 	"{{.Prefix}}/controller"
 	{{end}}
+	
+	"Microservices_demo/tools/middleware"
 
 )
 	
 type RouterServer struct{}
 {{range .Rpc}}
+
+
 func (s *RouterServer) {{.Name}}(ctx context.Context, r* {{$.Package.Name}}.{{.RequestType}})(resp* {{$.Package.Name}}.{{.ReturnsType}}, err error){
+	mvFunc := middleware.BuildServerMiddleware(mv{{.Name}})
+	mvResp, err := mvFunc(ctx, r)
+
+	resp = mvResp.(*{{$.Package.Name}}.{{.ReturnsType}})
+	return
+}
+
+func mv{{.Name}}(ctx context.Context, request interface{})(resp interface{}, err error) {
+	r := request.(*{{$.Package.Name}}.{{.RequestType}})
 	ctrl := &controller.{{.Name}}Controller{}
 	resp ,err = ctrl.CheckParams(ctx, r)
 	if err != nil {
-		return 
+		return
 	}
 
 	resp, err = ctrl.Run(ctx, r)
